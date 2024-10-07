@@ -54,28 +54,27 @@ class odometry:
         return novapi.get_roll()
     
     def update_position(self):
-        # get the rpm of each wheel
+        # get the motors rpm
         left_front_rpm = self.left_front_encoder.get_value("speed")
         left_rear_rpm = self.left_rear_encoder.get_value("speed")
         right_front_rpm = self.right_front_encoder.get_value("speed")
         right_rear_rpm = self.right_rear_encoder.get_value("speed")
-        
-        # get the gyro angle
-        theta = self.get_gyro_angle()
-
-        # calculate the wheel speeds using the circumference of the wheel
+    
+        # convert rpm to speed using the circumference of wheel
         left_front_speed = (left_front_rpm * 2 * math.pi * self.wheel_radius) / 60
         left_rear_speed = (left_rear_rpm * 2 * math.pi * self.wheel_radius) / 60
         right_front_speed = (right_front_rpm * 2 * math.pi * self.wheel_radius) / 60
         right_rear_speed = (right_rear_rpm * 2 * math.pi * self.wheel_radius) / 60
-
-        velocity_x = (left_front_speed + left_rear_speed + right_front_speed + right_rear_speed) / 4
+    
+        # use mecanum kinematics to calculate the robot angular velocity, velocity x, velocity y
+        velocity_x = (left_front_speed - left_rear_speed + right_front_speed - right_rear_speed) / 4
         velocity_y = (left_front_speed + left_rear_speed + right_front_speed + right_rear_speed) / 4
-
-        # update the position
-        self.x += velocity_x * math.cos(self.theta) * self.dt
-        self.y += velocity_y * math.sin(self.theta) * self.dt
-        self.theta = theta
+        omega = (left_front_speed - left_rear_speed - right_front_speed + right_rear_speed) / (4 * self.wheel_distance)
+    
+        # update the robot position using the velocities
+        self.x += (velocity_x * math.cos(self.theta) - velocity_y * math.sin(self.theta)) * self.dt
+        self.y += (velocity_x * math.sin(self.theta) + velocity_y * math.cos(self.theta)) * self.dt
+        self.theta += omega * self.dt  # Update heading angle
         
         return self.x, self.y, self.theta
 
